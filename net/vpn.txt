@@ -1,0 +1,62 @@
+# VPN
+
+
+L2TP支持包括IP、ATM、帧中继、X.25在内的多种网络。在IP网络中，
+L2TP协议使用注册端口UDP 1701。[1]因此，在某种意义上，尽管L2TP协议的确是一个
+数据链路层协议，但在IP网络中，它又的确是一个会话层协议
+
+
+隧道技术是VPN技术的基础
+按照开放系统互连参考模型( OSI)的划分，隧道技术可以分为第2层和第3层隧道协议
+
+- 第2层隧道协议使用帧作为数据交换单位。
+PPTP、L2TP都属于第2层隧道协议，它们都是将数据封装在点对点协议( PPP)帧中通过互联网发送的
+
+- 第3层隧道协议使用包作为数据交换单位。
+IPoverIP和IPSec隧道模式都属于第3层隧道协议，它们都是将lP包封装在附加的IP包头中通过IP网
+络传送
+
+
+> PPTP协议
+PPTP（Point-to-Point Tunneling Protocol，点对点隧道协议）是PPP（点对点）协议的扩展，
+并协调使用PPP的身份验证、压缩和加密机制。它允许对IP、IPX或NETBEUI数据流进行加密，
+然后封装在IP包头中通过诸如Internet这样的公共网络发送，从而实现多功能通信。 [3] 
+只有IP网络才可以建立PPTP的VPN。两个局域网之间若通过PPTP来连接，则两端直接连接
+到Internet的VPN服务器必须要执行TC P/IP通信协议，但网络中的其他计算机不一定需要
+执行TCP/IP协议，它们可以执行TCP/IP、IPX或NetBEUI通信协议。因为当它们通过VPN服
+务器与远程计算机通信时，这些不同通信协议的数据包会被封装到PPP的数据包内，然后
+经过Internet传送，信息到达目的地后，再由远程的VPN服务器将其还原为TCP/IP、IPX或
+NetBEUI数据包。但需要注意的是，PPTP会话不能通过代理服务器进行。 [3] 
+
+> L2TP协议
+L2TP（Layer Two Tunneling Protocol，第2层隧道协议）是基于RFC的隧道协议，该协议依赖
+于加密服务的Internet安全性(IPSec)。该协议允许客户通过其间的网络建立隧道，L2TP还
+支持信道认证，但它没有规定信道保护的方法。 [3] 
+
+> IPSec协议
+IPSec是由IETF( Internet Engineering Task Force)定义的一套在网络层提供IP安全性的协议。
+它主要用于确保网络层之间的安全通信。该协议使用IPSec协议集保护IP网和非IP网上的L2TP业务。
+在IPSec协议中，一旦IPSec通道建立，在通信双方网络层之上的所有协议（如TCP、UDP、SNMP、
+HTTP、POP等）就要经过加密，而不管这些通道构建时所采用的安全和加密方法如何。 [3]
+
+
+# 在移动IP中应用
+ 隧道技术在移动IP中非常重要。移动IP使用IP的IP封装、最小封装和通用路由封装(GRE)
+ 三种隧道技术。 [4] 
+ 
+ 1. IP的IP封装
+ 由RFC2008定义，用于将IPv4包放在另一个IPv4包的净荷部分
+ 
+ 2. IP的最小封装
+ 
+ 3. 通用路由封装(GRE)  Generic Routing Encapsulation
+ 是VPN（Virtual Private Network）的第三层隧道协议
+ GRE over IPv4 和GRE over IPv6 两种隧道模式
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 

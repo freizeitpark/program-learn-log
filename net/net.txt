@@ -1,0 +1,32 @@
+# iproute2 vs net-tools
+- 简介
+net-tools包含ifconfig、route、arp和netstat等命令行工具，用于管理和排查各种网络配置。
+起源于BSD TCP/IP工具箱，旨在配置老式Linux内核的网络功能。
+自2001年以后，net-tools在Linux社区就停止发展了。
+
+- iproute2是另一个系列的网络配置工具，旨在取代net-tools的功能。
+目前大多数的Linux发行版已经弃用了net-tools，改而使用iproute2。
+
+![iproute2 vs net-tools](./iproute2-vs-net-tools.png)
+
+* ip addr show
+* ip -s link
+* ss -t
+https://www.freesion.com/article/7828379299/
+
+ip route help
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

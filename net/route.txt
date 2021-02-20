@@ -1,0 +1,287 @@
+# route
+
+ip link list 显示ip链路状态信息
+ip address show 除显示所有网络地址
+ip route show 显示主路由表信息
+ip neigh show 显示邻居表
+
+ip route list table table_number
+ip route list table table_name
+
+ip rule show
+----------
+
+linux可以自定义从1－252个路由表，
+linux系统维护了4个路由表：
+0#表 系统保留表
+253#表 defulte table 没特别指定的默认路由都放在改表
+254#表 main table 没指明路由表的所有路由放在该表
+255#表 locale table 保存本地接口地址，广播地址、NAT地址 由系统维护，用户不得更改
+
+- 路由表添加完毕即时生效，下面为实例
+`
+ip route add default via 192.168.1.1 table 1        在一号表中添加默认路由为192.168.1.1
+`
+`
+ip route add 192.168.0.0/24 via 192.168.1.2 table 1 在一号表中添加一条到192.168.0.0网段的路由为192.168.1.2
+`
+
+- ip rule show 显示路由规则
+路由规则的添加
+`
+ip rule add from 192.168.1.10/32 table 1 pref 100  # 如果pref值不指定，则将在已有规则最小序号前插入
+`
+
+----------
+
+https://blog.csdn.net/popsuper1982/article/details/51550384
+
+----------
+
+https://blog.csdn.net/u012758088/article/details/76255543
+
+`ip -V # 版本`
+
+# 一 、管理策略数据库
+- 1、查看策略数据库
+   `ip rule show` or `ip rule ls`
+- 2、添加规则   
+	在添加规则时，必须先确定好“条件”、“优先级别”及“路由表ID”，此后才可以执行添加规则的操作
+* 条件
+	> 条件是用来决定哪类数据包可以符合这项规则，而可用来匹配的字段为Source IP、Destination IP、Type of Service、fwmark及dev等
+      这些字段的使用方式如下
+
+    > souce IP
+	`ip rule add from 192.168.1.10 table 10 # 如果从1.10来，则参考table 10`
+	`ip rule add from 192.168.2.0/24 table 20  # 如果从2.00网段来，则参考table 20`
+
+	> Destination IP
+	`ip rule add to 168.95.1.1 table 10`
+	`ip rule add to 168.96.0.0/24 table 20 `
+	
+	> fwmark 将fwmark作为匹配条件时，必须搭配Netfilter一起使用
+	
+	> eg HTTP->1，SMTP->2，other->3
+	```
+	iptables -t mangle -A FORWARD -i eth3 -p tcp --dport 80 -j MARK --set-mark 1  
+	iptables -t mangle -A FORWARD -i eth3 -p tcp --dport 25 -j MARK --set-mark 2  
+	iptables -t mangle -A FORWARD -i eth3 -p tcp --dport 110 -j MARK --set-mark 2  
+	iptables -t mangle -A FORWARD -i eth3 -j MARK --set-mark 3  
+	ip rule add fwmark 1 table 1 
+	ip rule add fwmark 2 table 2
+	ip rule add fwmark 3 table 3
+	```
+
+	> dev 凡是由eth2接口送入的数据包都由eth0接口转发出去，
+	   由eth3接口送入的数据包都由eth1接口转发出去
+	```
+	ip rule add dev eth2 table 1
+	ip rule add dev eth3 table 3
+	``` 
+	
+	>  优先级别
+	```
+	0 32766 优先级，数字越小 优先级越高;后加的有限级高
+	[root@localhost ~]# ip rule show  
+	0: from all lookup local  
+	32766: from all lookup main  
+	32767: from all lookup default
+	
+	[root@localhost ~]# ip rule add from 192.168.1.0/24 table 1  
+	[root@localhost ~]# ip rule add from 192.168.2.0/24 table 2  
+	[root@localhost ~]#  
+	[root@localhost ~]# ip rule show  
+	0: from all lookup local  
+	32764: from 192.168.2.0/24 lookup 2  
+	32765: from 192.168.1.0/24 lookup 1  
+	
+	# 主动设定优先级
+	[root@localhost ~]# ip rule add from 192.168.1.0/24 table 1 prio 10  
+	[root@localhost ~]# ip rule add from 192.168.2.0/24 table 2 prio 20  
+    ```
+	
+	> 路由表ID, 在Linux的基于策略的路由中，路由表用ID来表示
+
+	> 4、删除规则
+	```
+	ip rule del prio 10
+	ip rule del from 192.168.1.0/24
+	ip rule del table 1
+	ip rule del from 192.168.1.0/24 table 1 prio 10
+	```
+
+# 二、路由表管理
+```
+[root@localhost /]# ip rule show  
+0: from all lookup local  
+32766: from all lookup main  
+32767: from all lookup default  
+```
+
+- 查看路由表内容
+
+```
+[root@localhost /]# ip route show table main  
+10.10.15.0/25 dev eth0 proto kernel scope link src 10.10.15.46  
+192.168.1.0/24 dev eth1 proto kernel scope link src 192.168.1.10  
+default via 10.10.15.1 dev eth0  
+```
+
+- 如果要将路由添加到main以外的路由表，只有先添加“规则”才能确定新的路由表名称(Table ID)，有了新的路由表之后，
+  才会把路由添加到新的路由表中
+
+```
+[root@localhost ~]# ip rule show   
+0: from all lookup local  
+32766: from all lookup main  
+32767: from all lookup default  
+
+# 从2.0网段进来的都进入表10
+# 本机与192.168.1.0/24网段的通信都通过eth1接口来处理
+# 接着填入这个路由表的默认路由
+#
+
+[root@localhost ~]#  
+[root@localhost ~]# ip rule add from 192.168.2.0/24 table 10  #添加规则到表10
+[root@localhost ~]#  
+[root@localhost ~]# ip route show table 10 # 查看表10路由,不存在内容
+[root@localhost ~]#  
+[root@localhost ~]# ip route add 192.168.1.0/24 dev eth1 table 10# 添加路由到表10
+[root@localhost ~]# ip route add default via 192.168.1.254 table 10   
+[root@localhost ~]#  
+[root@localhost ~]# ip route show table 10   # 显示路由
+192.168.1.0/24 dev eth1 scope link  
+default via 192.168.1.254 dev eth1  
+[root@localhost ~]# 
+```
+
+公司内网要求192.168.0.100以内的使用 10.0.0.1 网关上网（电信），
+其他IP使用 20.0.0.1 （网通）上网
+
+```
+ ip route add default gw 20.0.0.1 
+ ip route add table  3 via 10.0.0.1 dev ethX (ethX是10.0.0.1所在的网卡，3 是路由表的编号) 
+ ip rule add  fwmark 3    table 3
+ iptables -A PREROUTING -t mangle -i eth0 -s 192.168.0.1 -192.168.0.100  -j MARK --set-mark 3
+```
+ 
+ 因为mangle的处理是优先于 nat 和fiter表的，所以相应数据包到达之后先打上标记，之后再通过ip rule规则。
+ 对应的数据包使用相应的路由表进行路由，最后读取路由表信息，将数据包送出网关
+ 
+ 
+
+
+
+
+- ip rule规则添加示例： 
+#ip rule add from 192.168.1.112/32 [tos 0x10] table test2 pref 999 prohibit 
+#ip rule add to 192.168.1.2 pref 1000 table test1 
+#ip rule add from 192.168.1.0/24 pref 1001 table test1 
+#ip rule add [from 0/0] table test1 pref 1003 
+#ip rule add fwmark 1 pref 1002 table test2 
+
+
+- 路由表添加完毕即时生效，下面为实例：
+#ip route add default via 192.168.1.1 table 1   在1表中添加默认路由为192.168.1.1
+#ip route add 192.168.0.0/24 via 192.168.1.2    添加一条到192.168.0.0网段的路由为192.168.1.2
+
+示例1: 设置到网络10.0.0/24的路由经过网关193.233.7.65
+# ip route add 10.0.0/24 via 193.233.7.65
+
+-------
+
+由Linux实现流量分割，
+
+1， 到202.96.209.133的数据从Linux路由器的eth2到路由器A,再到202.96.209.133。
+2， 到Internet其他地方的数据从Linux路由器的eth1到路由器B,再到Internet。
+
+1，实现第一个功能
+echo 1 >/proc/sys/net/ipv4/ip_forward
+
+ip ru add from 172.16.16.2 lookup 5 # from  172.16.16.2 查找路由表5
+
+1）在路由表5中添加一条路由，到202.96.209.133的数据经过192.168.1.1：
+#ip ro add 202.96.209.133 via 192.168.1.1 table 5
+
+2）这样就完成了路由的设置，因为172.16.16.2是私有地址，所以在Linux路由器的
+   出口eth2处应该对其进行NAT的设置，如下：
+# iptables -t nat -A POSTROUTING -s 172.16.16.2 -d 202.96.209.133 -j SNAT --to 192.168.1.3
+3）刷新路由缓存：
+# ip ro flush cache
+
+2， 实现第二个功能（在第一个的基础上）
+1）在路由表5中添加默认路由：
+# ip ro add default via 10.10.10.2 table 5
+
+2）在Linux路由器的出口eth1处进行NAT设置：
+# iptables -t nat -A POSTROUTING -s 172.16.16.2 -j SNAT --to 10.10.10.1
+
+3）刷新路由缓存
+# ip ro flush cache
+
+
+
+
+#!/bin/sh  
+echo 1 >/proc/sys/net/ipv4/ip_forward  
+ip ru add from 172.16.16.2 lookup 5  
+ip ro add 202.96.209.133 via 192.168.1.1 table 5  
+iptables -t nat -A POSTROUTING -s 172.16.16.2 -d 202.96.209.133 -j SNAT --to 192.168.1.3  
+ip ro add default via 10.10.10.2 table 5  
+iptables -t nat -A POSTROUTING -s 172.16.16.2 -j SNAT --to 10.10.10.1  
+ip ro flush cache  
+
+你也可以将上面脚本中的几行iptables命令合为一行如下：
+#iptables -t nat -A POSTROUTING -s 172.16.16.2 -j MASQUERADE
+
+那么脚本如下：
+#!/bin/sh
+echo 1 >/proc/sys/net/ipv4/ip_forward
+ip ru add from 172.16.16.2 lookup 5
+ip ro add 202.96.209.133 via 192.168.1.1 table 5
+ip ro add default via 10.10.10.2 table 5
+iptables -t nat -A POSTROUTING -s 172.16.16.2 -j MASQUERADE
+ip ro flush cache
+
+
+------
+
+描述：实验中有两个局域网：LAN 1和LAN 2，我们要实现如下功能：
+
+1，LAN 1中的192.168.2.25和192.168.2.128从路由器A上网；
+2，LAN 1中的其他用户从路由器B上网；
+3，LAN 2中的所有用户从路由器A上网
+
+
+#!/bin/sh  
+echo 1> /proc/sys/net/ipv4/ip_forward  
+iptables -t nat -A POSTROUTING -s 192.168.2.0/24 -j MASQUERADE  
+iptables -t nat -A POSTROUTING -s 172.16.3.0/24 -j MASQUERADE  
+ip rule add from 192.168.2.25 lookup 5  
+ip rule add from 192.168.2.128 lookup 5  
+ip route add default via 192.168.0.1 table 5  
+ip rule add from 192.168.2.0/24 lookup 6  
+ip rule add from 172.16.3.0/24 lookup 6  
+ip route add default via 192.168.1.1 table 6  
+ip route flush cache 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
